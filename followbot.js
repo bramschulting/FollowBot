@@ -30,7 +30,7 @@ FollowBot.prototype = {
     }).then(function(following) {
       return bot.getRandomAccounts( following, amount );
     }).then(function(randomAccounts) {
-      bot.follow(randomAccounts);
+      //bot.follow(randomAccounts);
 
       // @TODO - Send email
       // @TODO - Store new ids in txt file. Used when sending a "Last week you followed ..." mail
@@ -105,29 +105,23 @@ FollowBot.prototype = {
   follow: function follow( accounts ) {
     debug.log( 'Follow ' + accounts.length + ' accounts' );
 
-    var bot = this
-      , followPromises = [];
-    accounts.forEach(function(account) {
-      debug.log( 'Follow account ' + account.name );
+    var bot = this;
 
-      // followPromises.push(function() {
-      //   var followDefer = Promise.pending();
+    var followPromises = accounts.map(function followSingle(account) {
+      var followDefer = Promise.pending();
+      bot.account.post( 'friendships/create', {
+          user_id: account.id
+        , follow: true
+      }, function( err, resp ) {
+        if( err ) {
+          followDefer.reject( err );
+          return;
+        }
 
-      //   bot.account.post( 'friendships/create', {
-      //       user_id: account.id
-      //     , follow: true
-      //   }, function( err, resp ) {
-      //     if( err ) {
-      //       followDefer.reject( err );
-      //       return;
-      //     }
+        followDefer.resolve( resp );
+      });
 
-      //     followDefer.resolve( resp.users );
-      //   });
-
-      //   return followDefer.promise;
-      // });
-
+      return followDefer.promise;
     });
 
     return Promise.all(followPromises);

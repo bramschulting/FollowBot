@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "twit": "^1.1.19",
-    "bluebird": "^2.8.1"
+    "bluebird": "^2.8.1",
+    "sinon": "^1.12.2",
+    "chai": "^1.10.0"
   },
   "devDependencies": {},
   "scripts": {
