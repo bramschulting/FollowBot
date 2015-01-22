@@ -3,10 +3,13 @@ var Promise = require( 'bluebird' )
   , Debug = require( './debug' )
   , debug = new Debug( 'FollowBot' );
 
+var API_LIMIT = 1;
+
 var FollowBot = function FollowBot( config ) {
 
   this.account = new Twit(config.twitter);
   this.allowProtected = config.allowProtected || false;
+  this.strict = config.strict || false;
 
 };
 
@@ -36,11 +39,14 @@ FollowBot.prototype = {
     var defer = Promise.pending()
       , fullStack = []
       , bot = this
+      , requests = 0
+      , reachedLimit
       , next_cursor;
 
     function getBatch( cursor, cb ) {
       debug.log( 'Get batch' );
 
+      ++requests;
       bot.account.get( 'followers/ids', {
           count: 5000
         , stringify_ids: true
@@ -54,7 +60,8 @@ FollowBot.prototype = {
         fullStack = fullStack.concat( resp.ids || [] );
 
         next_cursor = String( resp.next_cursor_str || resp.next_cursor || -1 );
-        if( next_cursor && ( next_cursor !== '-1' && next_cursor !== '0' ) ) {
+        reachedLimit = ( this.strict && requests < API_LIMIT - 1 );
+        if( next_cursor && ( next_cursor !== '-1' && next_cursor !== '0' ) && !reachedLimit ) {
           return getBatch( resp.next_cursor_str || resp.next_cursor, cb );
         }
         
