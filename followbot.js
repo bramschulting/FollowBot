@@ -3,7 +3,7 @@ var Promise = require( 'bluebird' )
   , Debug = require( './debug' )
   , debug = new Debug( 'FollowBot' );
 
-var API_LIMIT = 1;
+var API_LIMIT = 15;
 
 var FollowBot = function FollowBot( config ) {
 
@@ -60,7 +60,7 @@ FollowBot.prototype = {
         fullStack = fullStack.concat( resp.ids || [] );
 
         next_cursor = String( resp.next_cursor_str || resp.next_cursor || -1 );
-        reachedLimit = ( this.strict && requests < API_LIMIT - 1 );
+        reachedLimit = ( bot.strict === true && requests >= API_LIMIT - 1 );
         if( next_cursor && ( next_cursor !== '-1' && next_cursor !== '0' ) && !reachedLimit ) {
           return getBatch( resp.next_cursor_str || resp.next_cursor, cb );
         }

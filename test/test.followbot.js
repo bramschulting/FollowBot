@@ -15,7 +15,8 @@ describe( 'FollowBot', function() {
         access_token: 'TOKEN',
         access_token_secret: 'SECRET'
       },
-      allowProtected: false
+      allowProtected: false,
+      strict: true
     });
 
     sandbox.stub( bot.account, 'get' );
@@ -86,6 +87,16 @@ describe( 'FollowBot', function() {
 
         expect( followers ).to.be.an( 'array' );
         expect( followers ).to.have.length( 0 );
+
+        done();
+      }).catch(done);
+    });
+
+    it( 'should not reach the api limit in strict mode', function(done) {
+      bot.account.get.yields(false, { next_cursor_str: 42, ids: [] });
+
+      bot.getFollowers().then(function() {
+        expect( bot.account.get.callCount ).to.equal( 14 );
 
         done();
       }).catch(done);
