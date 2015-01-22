@@ -189,7 +189,7 @@ describe( 'FollowBot', function() {
 
     it( 'should reject > 50', function(done) {
       bot.followRandom( 51 ).catch(function(err) {
-        expect( err ).to.equal( 'Because of api limitations, you can follow up to 50 random followers.' );
+        expect( err ).to.eql( new Error( 'Because of api limitations, you can follow up to 50 random followers.' ) );
         done();
       }).catch(done);
     });
