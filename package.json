@@ -1,5 +1,5 @@
 {
-  "name": "FollowBot",
+  "name": "followbot",
   "version": "0.0.1",
   "description": "A Twitter bot that follows a random amount of your followers back",
   "main": "followbot.js",
