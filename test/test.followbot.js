@@ -12,7 +12,7 @@ describe( 'FollowBot', function() {
 
     sandbox.stub( bot.account, 'get' );
     sandbox.stub( bot.account, 'post' );
-    sandbox.stub( Math, 'floor' );
+    sandbox.stub( bot.__privates, 'shuffleArray' );
   });
 
   afterEach(function() {
@@ -33,23 +33,23 @@ describe( 'FollowBot', function() {
         expect( bot.account.get.callCount ).to.equal( 1 );
 
         expect( bot.account.get.getCall(0).args ).to.have.length( 3 );
-        expect( bot.account.get.getCall(0).args[0] ).to.equal( 'followers/list' );
-        expect( bot.account.get.getCall(0).args[1] ).to.eql({ count: 200, skip_status: true, cursor: -1 });
+        expect( bot.account.get.getCall(0).args[0] ).to.equal( 'followers/ids' );
+        expect( bot.account.get.getCall(0).args[1] ).to.eql({ count: 5000, stringify_ids: true, cursor: -1 });
 
         done();
       }).catch(done);
     });
 
-    it( 'should send multiple requests ', function(done) {
-      bot.account.get.yields(false, { next_cursor: 42, users: [] });
-      bot.account.get.onCall(1).yields( false, { users: [ 'user 2' ] });
+    it( 'should send multiple requests', function(done) {
+      bot.account.get.yields(false, { next_cursor_str: 42, ids: [] });
+      bot.account.get.onCall(1).yields( false, { ids: [ '123' ] });
 
       bot.getFollowers().then(function() {
         expect( bot.account.get.callCount ).to.equal( 2 );
 
         expect( bot.account.get.getCall(1).args ).to.have.length( 3 );
-        expect( bot.account.get.getCall(1).args[0] ).to.equal( 'followers/list' );
-        expect( bot.account.get.getCall(1).args[1] ).to.eql({ count: 200, skip_status: true, cursor: 42 });
+        expect( bot.account.get.getCall(1).args[0] ).to.equal( 'followers/ids' );
+        expect( bot.account.get.getCall(1).args[1] ).to.eql({ count: 5000, cursor: 42, stringify_ids: true });
 
         done();
       }).catch(done);
@@ -57,15 +57,15 @@ describe( 'FollowBot', function() {
 
     it( 'should resolve followers', function(done) {
       bot.account.get.yields(false, {
-        users: [ 'user 1', 'user 2' ]
+        ids: [ '111', '222' ]
       });
 
-      bot.getFollowers().then(function(followers) {
+      bot.getFollowers().then(function(ids) {
 
-        expect( followers ).to.be.an( 'array' );
-        expect( followers ).to.have.length( 2 );
-        expect( followers[0] ).to.equal( 'user 1' );
-        expect( followers[1] ).to.equal( 'user 2' );
+        expect( ids ).to.be.an( 'array' );
+        expect( ids ).to.have.length( 2 );
+        expect( ids[0] ).to.equal( '111' );
+        expect( ids[1] ).to.equal( '222' );
 
         done();
       }).catch(done);
@@ -87,49 +87,56 @@ describe( 'FollowBot', function() {
 
   describe( 'getRandomAccounts', function() {
 
-    var allAccounts;
+    var allIds, allAccounts;
 
     beforeEach(function() {
 
-      allAccounts = [{
-        id: 1
-      }, {
-        id: 2
-      }, {
-        id: 3
-      }];
+      allIds = ['111', '222', '333'];
+      allAccounts = [{ id: 111 }, { id: 222 }, { id: 333 }];
 
     });
 
-    it( 'should return all accounts if max is >=', function() {
+    it( 'should return all accounts if max is >=', function(done) {
+      bot.account.get.yields( false, allAccounts );
 
-      var randomAccounts = bot.getRandomAccounts( allAccounts, 40 );
-      expect( randomAccounts ).to.eql( allAccounts );
+      bot.getRandomAccounts( allIds, 40 ).then(function(randomAccounts) {
 
-    });
+        expect( randomAccounts ).to.eql( allAccounts );
 
-    it( 'should return random accounts', function() {
-      Math.floor.onCall(0).returns(2);
-      Math.floor.onCall(1).returns(0);
-
-      var randomAccounts = bot.getRandomAccounts( allAccounts, 2 );
-
-      expect( randomAccounts ).to.have.length(2);
-      expect( randomAccounts[0].id ).to.equal( 3 );
-      expect( randomAccounts[1].id ).to.equal( 1 );
+        done();
+      }).catch(done);
 
     });
 
-    it( 'should not pick the same account twice', function() {
-      Math.floor.onCall(0).returns(2);
-      Math.floor.onCall(1).returns(2);
-      Math.floor.onCall(2).returns(0);
+    it( 'should return random accounts', function(done) {
+      bot.__privates.shuffleArray.returns([ allIds[2], allIds[0], allIds[1] ]);
+      bot.account.get.yields( false, [ allAccounts[2], allAccounts[0], allAccounts[1] ] );
 
-      var randomAccounts = bot.getRandomAccounts( allAccounts, 2 );
+      bot.getRandomAccounts( allIds, 2 ).then(function(randomAccounts) {
 
-      expect( randomAccounts ).to.have.length(2);
-      expect( randomAccounts[0].id ).to.equal( 3 );
-      expect( randomAccounts[1].id ).to.equal( 1 );
+        expect( randomAccounts ).to.have.length(2);
+        expect( randomAccounts[0].id ).to.equal( 333 );
+        expect( randomAccounts[1].id ).to.equal( 111 );
+
+        done();
+      }).catch(done);
+
+    });
+
+    it( 'should not pick following accounts', function(done) {
+      var following = allAccounts[0];
+      following.following = true;
+      bot.__privates.shuffleArray.returns([ allIds[2], allIds[0], allIds[1] ]);
+      bot.account.get.yields( false, [ allAccounts[2], following, allAccounts[1] ] );
+
+      bot.getRandomAccounts( allIds, 2 ).then(function(randomAccounts) {
+
+        expect( randomAccounts ).to.have.length(2);
+        expect( randomAccounts[0].id ).to.equal( 333 );
+        expect( randomAccounts[1].id ).to.equal( 222 );
+
+        done();
+      }).catch(done);
     });
 
   });
@@ -160,6 +167,52 @@ describe( 'FollowBot', function() {
         done();
       }).catch(done);
 
+    });
+
+  });
+
+  describe( 'followRandom', function() {
+
+    beforeEach(function() {
+      sandbox.stub( bot, 'getFollowers' );
+      sandbox.stub( bot, 'getRandomAccounts' );
+      sandbox.stub( bot, 'follow' );
+    });
+
+    it( 'should reject > 50', function(done) {
+      bot.followRandom( 51 ).catch(function(err) {
+        expect( err ).to.equal( 'Because of api limitations, you can follow up to 50 random followers.' );
+        done();
+      }).catch(done);
+    });
+
+    it( 'should following random accounts', function(done) {
+      var _randomIds = [ 111, 222, 333 ]
+        , _randomAccounts = [ { id: 333 }, { id: 111 } ];
+      bot.getFollowers.returns(Promise.resolve(_randomIds));
+      bot.getRandomAccounts.returns(Promise.resolve(_randomAccounts));
+      bot.follow.returns(Promise.resolve(_randomAccounts));
+
+      bot.followRandom( 2 ).then(function(randomAccounts) {
+
+        expect( bot.getFollowers.callCount ).to.equal( 1 );
+        expect( bot.getFollowers.getCall(0).args ).to.have.length( 0 );
+
+        expect( bot.getRandomAccounts.callCount ).to.equal( 1 );
+        expect( bot.getRandomAccounts.getCall(0).args ).to.have.length( 2 );
+        expect( bot.getRandomAccounts.getCall(0).args[0] ).to.equal( _randomIds );
+        expect( bot.getRandomAccounts.getCall(0).args[1] ).to.equal( 2 );
+
+        expect( bot.follow.callCount ).to.equal( 1 );
+        expect( bot.follow.getCall(0).args ).to.have.length( 1 );
+        expect( bot.follow.getCall(0).args[0] ).to.equal( _randomAccounts );
+
+        expect( randomAccounts ).to.be.an( 'array' );
+        expect( randomAccounts ).to.have.length( 2 );
+        expect( randomAccounts ).to.eql( _randomAccounts );
+
+        done();
+      }).catch(done);
     });
 
   });

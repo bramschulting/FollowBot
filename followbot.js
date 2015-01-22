@@ -27,7 +27,7 @@ FollowBot.prototype = {
     return bot.getFollowers().then(function(ids) {
       return bot.getRandomAccounts(ids, amount);
     }).then(function(randomAccounts) {
-      //bot.follow(randomAccounts);
+      bot.follow(randomAccounts);
 
       // @TODO - Send email
       // @TODO - Store new ids in txt file. Used when sending a "Last week you followed ..." mail
