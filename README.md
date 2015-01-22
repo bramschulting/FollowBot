@@ -3,7 +3,7 @@ A Twitter bot that follows a random amount of your followers back
 
 ## Usage
 
-*There's [a demo](../tree/master/demo) included*
+*There's [a demo](demo) included*
 
 ```
 var FollowBot = require( 'FollowBot' );
