@@ -58,8 +58,8 @@ FollowBot.prototype = {
 
         fullStack = fullStack.concat( resp.ids || [] );
 
-        if( resp.next_cursor ) {
-          return getBatch( resp.next_cursor_str, cb );
+        if( resp.next_cursor_str || resp.next_cursor ) {
+          return getBatch( resp.next_cursor_str || resp.next_cursor, cb );
         }
         
         cb();
@@ -102,9 +102,7 @@ FollowBot.prototype = {
     debug.log( 'Get ' + max + ' random account' );
 
     var defer = Promise.pending()
-      , randomIds = []
-      , randomNumber
-      , randomId;
+      , randomIds = [];
 
     // Get random IDs
     if( ids.length <= max ) {
@@ -112,15 +110,8 @@ FollowBot.prototype = {
       randomIds = ids;
     }
     else {
-      while( randomIds.length != ( max * 2 ) ) {
-        randomNumber = Math.floor( Math.random() * ids.length );
-        randomId = ids[( randomNumber )];
-
-        if( randomIds.indexOf( randomIds.id ) === -1 ) {
-          debug.log( 'Add random account ' + randomId );
-          randomIds.push( randomId );
-        }
-      }
+      // Shuffle the ids
+      randomIds = privates.shuffleArray(ids).slice( 0, ( max * 2 ) );
     }
 
     // Convert them into user objects
@@ -130,7 +121,7 @@ FollowBot.prototype = {
 
       for( var i = 0; i < accounts.length && randomAccounts.length != max; ++i ) {
         // @TODO - Protected
-        if( accounts[i].following === false ) {
+        if( accounts[i].following !== true ) {
           randomAccounts.push( accounts[i] );
         }
       }
@@ -167,5 +158,29 @@ FollowBot.prototype = {
   }
 
 };
+
+var privates = {
+
+  shuffleArray: function shuffleArray( array ) {
+    var currentIndex = array.length
+      , shuffled = array
+      , temporaryValue
+      , randomIndex;
+
+    while( 0 !== currentIndex ) {
+      randomIndex = Math.floor( Math.random() * currentIndex );
+      currentIndex -= 1;
+
+      temporaryValue = shuffled[currentIndex];
+      shuffled[currentIndex] = shuffled[randomIndex];
+      shuffled[randomIndex] = temporaryValue;
+    }
+
+    return shuffled;
+  }
+
+};
+
+FollowBot.prototype.__privates = privates;
 
 module.exports = FollowBot;
