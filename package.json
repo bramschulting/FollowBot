@@ -1,8 +1,8 @@
 {
   "name": "FollowBot",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A Twitter bot that every week automatically follows some of your followers back",
-  "main": "app.js",
+  "main": "followbot.js",
   "directories": {
     "test": "test"
   },

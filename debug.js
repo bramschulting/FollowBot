@@ -7,7 +7,7 @@ function Debug( module ) {
 
   this.print = function print() {
 
-    if( ( typeof ENV === 'undefined' ) || ENV !== 'test' ) {
+    if( false ) {
       console.log.apply( console, arguments );
     }
 

@@ -8,7 +8,15 @@ describe( 'FollowBot', function() {
   beforeEach(function() {
     sandbox = sinon.sandbox.create();
 
-    bot = new FollowBot();
+    bot = new FollowBot({
+      twitter: {
+        consumer_key: 'KEY',
+        consumer_secret: 'SECRET',
+        access_token: 'TOKEN',
+        access_token_secret: 'SECRET'
+      },
+      allowProtected: false
+    });
 
     sandbox.stub( bot.account, 'get' );
     sandbox.stub( bot.account, 'post' );

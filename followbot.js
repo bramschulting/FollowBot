@@ -1,12 +1,12 @@
-var config = require( './config' )
-  , Promise = require( 'bluebird' )
+var Promise = require( 'bluebird' )
   , Twit = require( 'twit' )
   , Debug = require( './debug' )
   , debug = new Debug( 'FollowBot' );
 
-var FollowBot = function FollowBot() {
+var FollowBot = function FollowBot( config ) {
 
   this.account = new Twit(config.twitter);
+  this.allowProtected = config.allowProtected || false;
 
 };
 
@@ -17,9 +17,8 @@ FollowBot.prototype = {
     amount = amount || 1;
 
     if( amount > 50 ) {
-      // Because of API limitations, it is only save to work with
-      // up to 50 random followers. 
-      return Promise.reject( 'Because of api limitations, you can follow up to 50 random followers.' );
+      // Because of API limitations, it is only save to work with up to 50 random followers. 
+      return Promise.reject( new Error( 'Because of api limitations, you can follow up to 50 random followers.' ) );
     }
 
     var bot = this;
@@ -27,12 +26,7 @@ FollowBot.prototype = {
     return bot.getFollowers().then(function(ids) {
       return bot.getRandomAccounts(ids, amount);
     }).then(function(randomAccounts) {
-      bot.follow(randomAccounts);
-
-      // @TODO - Send email
-      // @TODO - Store new ids in txt file. Used when sending a "Last week you followed ..." mail
-
-      return randomAccounts;
+      return bot.follow(randomAccounts);
     }).catch(Promise.reject);
   },
 
@@ -41,7 +35,8 @@ FollowBot.prototype = {
 
     var defer = Promise.pending()
       , fullStack = []
-      , bot = this;
+      , bot = this
+      , next_cursor;
 
     function getBatch( cursor, cb ) {
       debug.log( 'Get batch' );
@@ -58,7 +53,8 @@ FollowBot.prototype = {
 
         fullStack = fullStack.concat( resp.ids || [] );
 
-        if( resp.next_cursor_str || resp.next_cursor ) {
+        next_cursor = String( resp.next_cursor_str || resp.next_cursor || -1 );
+        if( next_cursor && ( next_cursor !== '-1' && next_cursor !== '0' ) ) {
           return getBatch( resp.next_cursor_str || resp.next_cursor, cb );
         }
         
@@ -78,7 +74,7 @@ FollowBot.prototype = {
     debug.log( 'Convert ' + ids.length + ' ids to user objects' );
 
     if( ids.length > 100 && !ignoreOverflow ) {
-      return Promise.reject( 'Can only convert up to 100 ids at a time' );
+      return Promise.reject( new Error( 'Can only convert up to 100 ids at a time' ) );
     }
 
     var defer = Promise.pending()
@@ -102,6 +98,7 @@ FollowBot.prototype = {
     debug.log( 'Get ' + max + ' random account' );
 
     var defer = Promise.pending()
+      , bot = this
       , randomIds = [];
 
     // Get random IDs
@@ -115,13 +112,13 @@ FollowBot.prototype = {
     }
 
     // Convert them into user objects
-    this.convertIDs(randomIds).then(function(accounts) {
+    bot.convertIDs(randomIds).then(function(accounts) {
       // Filter invalid picks
       var randomAccounts = [];
 
       for( var i = 0; i < accounts.length && randomAccounts.length != max; ++i ) {
         // @TODO - Protected
-        if( accounts[i].following !== true ) {
+        if( accounts[i].following !== true && ( !accounts[i].protected || bot.allowProtected ) ) {
           randomAccounts.push( accounts[i] );
         }
       }
