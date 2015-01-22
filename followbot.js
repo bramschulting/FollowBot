@@ -16,19 +16,16 @@ FollowBot.prototype = {
   followRandom: function followRandom( amount ) {
     amount = amount || 1;
 
+    if( amount > 50 ) {
+      // Because of API limitations, it is only save to work with
+      // up to 50 random followers. 
+      return Promise.reject( 'Because of api limitations, you can follow up to 50 random followers.' );
+    }
+
     var bot = this;
 
-    return bot.getFollowers().then(function(followers) {
-      return followers.filter(function(follower) {
-        if( config.hasOwnProperty( 'allowProtected' ) && config.allowProtected === false ) {
-          return ( follower.following === false && follower.protected === false );
-        }
-        else {
-          return follower.following === false;
-        }
-      });
-    }).then(function(following) {
-      return bot.getRandomAccounts( following, amount );
+    return bot.getFollowers().then(function(ids) {
+      return bot.getRandomAccounts(ids, amount);
     }).then(function(randomAccounts) {
       //bot.follow(randomAccounts);
 
@@ -47,9 +44,11 @@ FollowBot.prototype = {
       , bot = this;
 
     function getBatch( cursor, cb ) {
-      bot.account.get( 'followers/list', {
-          count: 200
-        , skip_status: true
+      debug.log( 'Get batch' );
+
+      bot.account.get( 'followers/ids', {
+          count: 5000
+        , stringify_ids: true
         , cursor: cursor
       }, function( err, resp ) {
         if( err ) {
@@ -57,10 +56,10 @@ FollowBot.prototype = {
           return;
         }
 
-        fullStack = fullStack.concat( resp.users || [] );
+        fullStack = fullStack.concat( resp.ids || [] );
 
         if( resp.next_cursor ) {
-          return getBatch( resp.next_cursor, cb );
+          return getBatch( resp.next_cursor_str, cb );
         }
         
         cb();
@@ -68,38 +67,78 @@ FollowBot.prototype = {
     }
 
     getBatch( -1, function done() {
+      debug.log( 'Received full stack' );
       defer.resolve(fullStack);
     });
 
     return defer.promise;
   },
 
-  getRandomAccounts: function getRandomAccounts( accounts, max ) {
+  convertIDs: function convertIDs( ids, ignoreOverflow ) {
+    debug.log( 'Convert ' + ids.length + ' ids to user objects' );
+
+    if( ids.length > 100 && !ignoreOverflow ) {
+      return Promise.reject( 'Can only convert up to 100 ids at a time' );
+    }
+
+    var defer = Promise.pending()
+      , bot = this;
+
+    bot.account.get( 'users/lookup', {
+      user_id: ids.slice( 0, 100 ).join( ',' )
+    }, function( err, resp ) {
+      if( err ) {
+        defer.reject( err );
+        return;
+      }
+
+      defer.resolve( resp || [] );
+    });
+
+    return defer.promise;
+  },
+
+  getRandomAccounts: function getRandomAccounts( ids, max ) {
     debug.log( 'Get ' + max + ' random account' );
 
-    var randomAccounts = []
+    var defer = Promise.pending()
       , randomIds = []
       , randomNumber
-      , randomAccount;
+      , randomId;
 
-    if( accounts.length <= max ) {
+    // Get random IDs
+    if( ids.length <= max ) {
       debug.warn( 'Account has not enough followers' );
-      randomAccounts = accounts;
+      randomIds = ids;
     }
     else {
-      while( randomIds.length != max ) {
-        randomNumber = Math.floor( Math.random() * accounts.length );
-        randomAccount = accounts[( randomNumber )];
+      while( randomIds.length != ( max * 2 ) ) {
+        randomNumber = Math.floor( Math.random() * ids.length );
+        randomId = ids[( randomNumber )];
 
-        if( randomIds.indexOf( randomAccount.id ) === -1 ) {
-          debug.log( 'Add random account ' + randomAccount.name );
-          randomAccounts.push( randomAccount );
-          randomIds.push( randomAccount.id );
+        if( randomIds.indexOf( randomIds.id ) === -1 ) {
+          debug.log( 'Add random account ' + randomId );
+          randomIds.push( randomId );
         }
       }
     }
 
-    return randomAccounts;
+    // Convert them into user objects
+    this.convertIDs(randomIds).then(function(accounts) {
+      // Filter invalid picks
+      var randomAccounts = [];
+
+      for( var i = 0; i < accounts.length && randomAccounts.length != max; ++i ) {
+        // @TODO - Protected
+        if( accounts[i].following === false ) {
+          randomAccounts.push( accounts[i] );
+        }
+      }
+
+      defer.resolve( randomAccounts );
+    }).catch(defer.reject);
+
+    return defer.promise;
   },
 
   follow: function follow( accounts ) {
