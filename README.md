@@ -1,9 +1,9 @@
 # FollowBot
-A Twitter bot that every week automatically follows some of your followers back
+A Twitter bot that follows a random amount of your followers back
 
 ## Usage
 
-Create a `config.js` file:
+*There's [a demo](tree/master/demo) included*
 
 ```
 var FollowBot = require( 'FollowBot' );

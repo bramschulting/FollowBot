@@ -1,11 +1,18 @@
 {
   "name": "FollowBot",
   "version": "0.0.1",
-  "description": "A Twitter bot that every week automatically follows some of your followers back",
+  "description": "A Twitter bot that follows a random amount of your followers back",
   "main": "followbot.js",
   "directories": {
     "test": "test"
   },
+  "keywords": [
+    "twitter",
+    "bot",
+    "api",
+    "follow",
+    "random"
+  ],
   "dependencies": {
     "twit": "^1.1.19",
     "bluebird": "^2.8.1",
