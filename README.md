@@ -1,12 +1,14 @@
 # FollowBot
 A Twitter bot that every week automatically follows some of your followers back
 
-## Setup
+## Usage
 
 Create a `config.js` file:
 
 ```
-module.exports = {
+var FollowBot = require( 'FollowBot' );
+
+var followBot = new FollowBot({
 
   twitter: {
     consumer_key: 'REQUIRED',
@@ -14,13 +16,12 @@ module.exports = {
     access_token: 'REQUIRED',
     access_token_secret: 'REQUIRED'
   },
-
-  // Optional: the amount of random followers you want to follow back. Default: 1
-  amount: 10,
-  // Optional: false if you don't want to follow protected accounts. Default: true
+  
+  // Optional: false if you don't want to follow protected accounts. Default: false
   allowProtected: false
+});
 
-};
+followBot.followRandom(5);
 ```
 
 You can get the Twitter keys and tokens by [creating a new Twitter app](https://apps.twitter.com/app/new).
